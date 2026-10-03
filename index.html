@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exam Today</title>
+<style>
+  :root{
+    --ink:#1c1b19;
+    --paper:#f6f4ef;
+    --line:#d8d3c7;
+    --accent:#8a3324;
+    --accent-soft:#f0e3dd;
+    --ok:#2f6b4f;
+    font-size:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#f1ede4; --paper:#17150f; --line:#3a362c;
+      --accent:#e2a089; --accent-soft:#2b1e18; --ok:#8fd4af;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#f1ede4; --paper:#17150f; --line:#3a362c;
+    --accent:#e2a089; --accent-soft:#2b1e18; --ok:#8fd4af;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    display:flex; justify-content:center;
+  }
+  .sheet{ width:100%; max-width:640px; padding:1.4rem 1.5rem 3rem; }
+
+  nav{
+    display:flex; gap:.3rem; border-bottom:1px solid var(--line);
+    margin-bottom:1.8rem; padding-bottom:0; overflow-x:auto;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  nav button{
+    background:none; border:none; color:var(--ink); opacity:.55;
+    font-size:.85rem; font-family:inherit; padding:.6rem .2rem .7rem;
+    margin-right:1rem; cursor:pointer; border-bottom:2px solid transparent;
+    white-space:nowrap;
+  }
+  nav button.active{ opacity:1; border-bottom-color:var(--accent); font-weight:600; }
+
+  .page{ display:none; }
+  .page.active{ display:block; }
+
+  .kicker{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:.78rem; letter-spacing:.04em; color:var(--accent); margin:0 0 .4rem;
+  }
+  h1{ font-size:2rem; line-height:1.15; margin:0 0 .3rem; font-weight:600; }
+  h2{ font-size:1.3rem; margin:0 0 .8rem; font-weight:600; }
+  .sub{ font-size:1rem; color:var(--ink); opacity:.72; margin:0 0 1.8rem; max-width:34ch; }
+
+  .card{ border:1px solid var(--line); border-radius:4px; padding:1.6rem; margin-bottom:1.4rem; }
+  .status{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:.85rem; font-weight:600; margin:0 0 .9rem;
+  }
+  .status.before{color:var(--accent);}
+  .status.during{color:var(--ok);}
+  .status.after{color:var(--ink); opacity:.6;}
+  .clock{
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    font-size:clamp(2.4rem,10vw,3.4rem); line-height:1; letter-spacing:-.01em;
+    margin:0 0 .5rem; font-variant-numeric:tabular-nums;
+  }
+  .clock-label{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:.82rem; opacity:.6;
+  }
+  .window{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-top:1px solid var(--line); margin-top:1.4rem; padding-top:1.1rem;
+  }
+  .window div{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  .window .lbl{font-size:.75rem; opacity:.6; margin-bottom:.2rem;}
+  .window .val{font-size:1.15rem; font-weight:600;}
+  .bar-track{ height:6px; background:var(--accent-soft); border-radius:3px; overflow:hidden; margin-top:1.3rem; }
+  .bar-fill{ height:100%; width:0%; background:var(--accent); transition:width .4s ease; }
+  .note{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:.82rem; opacity:.55; line-height:1.5;
+  }
+
+  ol.steps{ margin:0; padding-left:1.2rem; }
+  ol.steps li{ margin-bottom:.9rem; line-height:1.5; }
+  ol.steps li::marker{ color:var(--accent); font-weight:600; }
+
+  .checklist{ list-style:none; margin:0; padding:0; }
+  .checklist li{
+    display:flex; align-items:flex-start; gap:.7rem;
+    padding:.8rem 0; border-bottom:1px solid var(--line);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:.95rem;
+  }
+  .checklist li:last-child{ border-bottom:none; }
+  .checklist input{ margin-top:.2rem; width:17px; height:17px; accent-color:var(--accent); flex-shrink:0; }
+  .checklist label.done{ text-decoration:line-through; opacity:.5; }
+
+  dl.qa dt{ font-weight:600; margin-top:1.1rem; }
+  dl.qa dt:first-child{ margin-top:0; }
+  dl.qa dd{ margin:.3rem 0 0; opacity:.78; line-height:1.55; }
+
+  .detail-row{
+    display:flex; justify-content:space-between; gap:1rem;
+    padding:.7rem 0; border-bottom:1px solid var(--line);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:.92rem;
+  }
+  .detail-row:last-child{ border-bottom:none; }
+  .detail-row .k{ opacity:.6; }
+  .detail-row .v{ font-weight:600; text-align:right; }
+
+  .actions{
+    display:flex; gap:.8rem; margin-top:.3rem;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  .btn{
+    flex:1; padding:.85rem 1rem; border-radius:4px; font-size:.92rem;
+    font-weight:600; font-family:inherit; cursor:pointer; text-align:center;
+  }
+  .btn-primary{ background:var(--accent); color:var(--paper); border:1px solid var(--accent); }
+  .btn-primary:disabled{ opacity:.4; cursor:not-allowed; background:var(--line); border-color:var(--line); color:var(--ink); }
+  .btn-ghost{ background:transparent; color:var(--ink); border:1px solid var(--line); }
+  .action-msg{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:.85rem; margin:.9rem 0 0; min-height:1.2em;
+  }
+  .action-msg.ok{ color:var(--ok); }
+  .action-msg.warn{ color:var(--accent); }
+
+  .overlay{
+    position:fixed; inset:0; background:#17150f; color:#f1ede4;
+    display:none; flex-direction:column; z-index:50;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .overlay.open{ display:flex; }
+  .win{
+    width:100%; height:100%; background:#17150f; color:#f1ede4;
+    display:flex; flex-direction:column;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  .win-bar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:.9rem 1.2rem; background:#0f0d09; border-bottom:1px solid #2b2820;
+    flex-shrink:0;
+  }
+  .win-bar .dots{ display:flex; align-items:center; gap:.5rem; font-size:.78rem; opacity:.55; letter-spacing:.03em; }
+  .win-bar button{
+    background:none; border:1px solid #3a362c; color:#f1ede4; opacity:.75; font-size:.82rem;
+    cursor:pointer; line-height:1; padding:.4rem .8rem; border-radius:5px; font-family:inherit;
+  }
+  .win-bar button:hover{ opacity:1; }
+  .win-body{ flex:1; overflow-y:auto; padding:2.2rem 1.6rem; text-align:center; }
+  .pulse-dot{
+    width:9px; height:9px; border-radius:50%; background:var(--ok); display:inline-block;
+    margin-right:.45rem; animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+  .win-status{ font-size:.75rem; letter-spacing:.04em; opacity:.6; margin:0 0 .9rem; }
+  .win-body h3{ font-size:1.2rem; margin:0 0 .6rem; }
+  .win-body p{ font-size:.85rem; opacity:.65; line-height:1.55; margin:0; }
+  .win-time{ font-family:ui-monospace,monospace; font-size:.78rem; opacity:.45; margin-top:1.3rem; }
+
+  .quiz-body{
+    flex:1; overflow-y:auto; padding:2.4rem 1.6rem 2.4rem; text-align:left;
+    display:flex; justify-content:center;
+  }
+  .quiz-inner{ width:100%; max-width:480px; }
+  .quiz-progress{ font-size:.78rem; opacity:.55; letter-spacing:.03em; margin:0 0 .5rem; }
+  .quiz-bar-track{ height:4px; background:#2b2820; border-radius:2px; overflow:hidden; margin-bottom:1.6rem; }
+  .quiz-bar-fill{ height:100%; background:var(--accent); transition:width .3s ease; }
+  .quiz-q{ font-size:1.25rem; line-height:1.4; margin:0 0 1.5rem; font-weight:600; }
+  .quiz-opts{ display:flex; flex-direction:column; gap:.7rem; margin-bottom:1.6rem; }
+  .quiz-opt{
+    text-align:left; padding:.75rem .9rem; border-radius:6px; border:1px solid #3a362c;
+    background:#1f1c15; color:#f1ede4; font-family:inherit; font-size:.9rem; cursor:pointer;
+  }
+  .quiz-opt:hover{ border-color:#5a5444; }
+  .quiz-opt.selected{ border-color:var(--ok); background:#20291f; }
+  .quiz-opt.correct{ border-color:#8fd4af; background:#1c3326; }
+  .quiz-opt.incorrect{ border-color:#d9897a; background:#331f1c; }
+  .quiz-nav{ display:flex; justify-content:flex-end; gap:.6rem; }
+  .quiz-btn{
+    padding:.6rem 1.1rem; border-radius:5px; font-family:inherit; font-size:.85rem;
+    font-weight:600; cursor:pointer; border:1px solid var(--accent); background:var(--accent); color:#17150f;
+  }
+  .quiz-btn:disabled{ opacity:.4; cursor:default; }
+  .quiz-score{ text-align:center; }
+  .quiz-score .big{ font-size:2.2rem; font-weight:700; margin:.4rem 0; }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <nav id="tabs">
+    <button data-page="home" class="active">Today</button>
+    <button data-page="instructions">Instructions</button>
+    <button data-page="checklist">Checklist</button>
+    <button data-page="details">Details</button>
+  </nav>
+
+  <section class="page active" id="page-home">
+    <p class="kicker">Today · Reminder</p>
+    <h1 id="headline">Exam window today</h1>
+    <p class="sub" id="subhead">Keep this open — it updates on its own.</p>
+
+    <div class="card">
+      <p class="status before" id="statusLine">Starts soon</p>
+      <p class="clock" id="clock">00:00:00</p>
+      <p class="clock-label" id="clockLabel">until start</p>
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+      <div class="window">
+        <div><div class="lbl">Starts</div><div class="val" id="startVal">7:30 AM</div></div>
+        <div><div class="lbl">Ends</div><div class="val" id="endVal">9:00 AM</div></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="startBtn" disabled>Start</button>
+      <button class="btn btn-ghost" id="cancelBtn">Cancel</button>
+    </div>
+    <p class="action-msg" id="actionMsg">Unlocks at 7:30 AM.</p>
+
+    <p class="note">Set for today's local time on this device. Nothing here is sent or saved anywhere.</p>
+  </section>
+
+  <section class="page" id="page-instructions">
+    <p class="kicker">Before you start</p>
+    <h2>How to be ready</h2>
+    <ol class="steps">
+      <li>Be seated and logged in with at least 10 minutes to spare — connection or login issues eat into your writing time, not the other way around.</li>
+      <li>Close every other tab and app. Keep only what the exam itself needs open.</li>
+      <li>Have your ID, admit card, and any permitted materials on the desk before the window opens.</li>
+      <li>Do a quick check: charger plugged in, webcam working if required, room quiet.</li>
+      <li>Once the window opens, confirm the on-screen timer matches what you expect before you begin answering.</li>
+      <li>Submit with a few minutes of buffer left — don't wait for an auto-submit to do it for you.</li>
+    </ol>
+  </section>
+
+  <section class="page" id="page-checklist">
+    <p class="kicker">Tick off as you go</p>
+    <h2>Readiness checklist</h2>
+    <ul class="checklist" id="checklistEl">
+      <li><input type="checkbox" id="c1"><label for="c1">Device charged / charger nearby</label></li>
+      <li><input type="checkbox" id="c2"><label for="c2">Stable internet confirmed</label></li>
+      <li><input type="checkbox" id="c3"><label for="c3">ID and admit card on the desk</label></li>
+      <li><input type="checkbox" id="c4"><label for="c4">Pen, paper, calculator (if allowed) ready</label></li>
+      <li><input type="checkbox" id="c5"><label for="c5">Other tabs and apps closed</label></li>
+      <li><input type="checkbox" id="c6"><label for="c6">Phone on silent, out of reach if not permitted</label></li>
+      <li><input type="checkbox" id="c7"><label for="c7">Logged in and ready 10 minutes early</label></li>
+    </ul>
+    <p class="note" style="margin-top:1.2rem;">Checks reset when you close this tab — nothing is stored.</p>
+  </section>
+
+  <section class="page" id="page-details">
+    <p class="kicker">At a glance</p>
+    <h2>Exam window</h2>
+    <div class="card" style="padding:1.2rem 1.6rem;">
+      <div class="detail-row"><span class="k">Date</span><span class="v" id="dateVal">—</span></div>
+      <div class="detail-row"><span class="k">Start time</span><span class="v">7:30 AM</span></div>
+      <div class="detail-row"><span class="k">End time</span><span class="v">9:00 AM</span></div>
+      <div class="detail-row"><span class="k">Duration</span><span class="v">1 hr 30 min</span></div>
+    </div>
+
+    <h2 style="margin-top:1.8rem;">Common questions</h2>
+    <dl class="qa">
+      <dt>What if I lose connection mid-exam?</dt>
+      <dd>Reconnect and log back in immediately — most platforms resume where your session left off, but don't count on extra time being granted.</dd>
+      <dt>Can I leave and come back?</dt>
+      <dd>Treat the window as one continuous sitting unless your exam's own instructions say otherwise.</dd>
+      <dt>Does this page submit anything for me?</dt>
+      <dd>No — this is only a timer and checklist. You still take the exam on its own platform.</dd>
+    </dl>
+  </section>
+
+</div>
+
+<div class="overlay" id="sessionOverlay">
+  <div class="win">
+    <div class="win-bar">
+      <div class="dots">RM & IPR · 50-question quiz</div>
+      <button id="closeSessionBtn" aria-label="Close">Exit quiz</button>
+    </div>
+    <div class="quiz-body"><div class="quiz-inner" id="quizBody"></div></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function todayAt(h,m){
+    const d = new Date();
+    d.setHours(h,m,0,0);
+    return d;
+  }
+  const start = todayAt(7,30);
+  const end = todayAt(9,0);
+  const totalMs = end - start;
+
+  const clock = document.getElementById('clock');
+  const clockLabel = document.getElementById('clockLabel');
+  const statusLine = document.getElementById('statusLine');
+  const headline = document.getElementById('headline');
+  const subhead = document.getElementById('subhead');
+  const barFill = document.getElementById('barFill');
+  const dateVal = document.getElementById('dateVal');
+
+  dateVal.textContent = start.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+
+  function fmt(ms){
+    ms = Math.max(0, ms);
+    const totalSec = Math.floor(ms/1000);
+    const h = Math.floor(totalSec/3600);
+    const m = Math.floor((totalSec%3600)/60);
+    const s = totalSec%60;
+    return [h,m,s].map(n => String(n).padStart(2,'0')).join(':');
+  }
+
+  let hasStarted = false;
+
+  function tick(){
+    const now = new Date();
+
+    if (!hasStarted){
+      if (now < start){
+        startBtn.disabled = true;
+        startBtn.textContent = 'Start';
+        actionMsg.className = 'action-msg';
+        actionMsg.textContent = 'Unlocks at 7:30 AM — ' + fmt(start - now) + ' to go.';
+      } else if (now < end){
+        startBtn.disabled = false;
+        actionMsg.className = 'action-msg ok';
+        actionMsg.textContent = 'You can start now.';
+      } else {
+        startBtn.disabled = true;
+        startBtn.textContent = 'Window closed';
+        actionMsg.className = 'action-msg warn';
+        actionMsg.textContent = "Today's window is over — Start is no longer available.";
+      }
+    }
+
+    if (now < start){
+      statusLine.className = 'status before';
+      statusLine.textContent = 'Starts soon';
+      clock.textContent = fmt(start - now);
+      clockLabel.textContent = 'until start';
+      barFill.style.width = '0%';
+      headline.textContent = 'Exam window today';
+      subhead.textContent = 'Keep this open — it updates on its own.';
+    } else if (now >= start && now < end){
+      statusLine.className = 'status during';
+      statusLine.textContent = 'In progress';
+      clock.textContent = fmt(end - now);
+      clockLabel.textContent = 'remaining';
+      const elapsed = now - start;
+      barFill.style.width = Math.min(100, (elapsed/totalMs)*100) + '%';
+      headline.textContent = 'Exam is on now';
+      subhead.textContent = 'This is your window — it closes automatically at the end time.';
+    } else {
+      statusLine.className = 'status after';
+      statusLine.textContent = 'Window closed';
+      clock.textContent = '00:00:00';
+      clockLabel.textContent = 'time is up';
+      barFill.style.width = '100%';
+      headline.textContent = 'Exam window has ended';
+      subhead.textContent = "Today's 7:30\u20139:00 AM slot is over.";
+    }
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  const tabs = document.querySelectorAll('#tabs button');
+  const pages = document.querySelectorAll('.page');
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      pages.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('page-' + btn.dataset.page).classList.add('active');
+    });
+  });
+
+  const startBtn = document.getElementById('startBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const actionMsg = document.getElementById('actionMsg');
+
+  const overlay = document.getElementById('sessionOverlay');
+  const closeSessionBtn = document.getElementById('closeSessionBtn');
+  const quizBody = document.getElementById('quizBody');
+
+  const quiz = [
+    { q: "What does IPR stand for?", opts: ["International Property Rights", "Intellectual Property Rights", "Indian Patent Registry", "Industrial Production Rights"], correct: 1 },
+    { q: "Which of these is NOT a form of intellectual property?", opts: ["Patent", "Trademark", "Copyright", "Mortgage"], correct: 3 },
+    { q: "In India, a patent is ordinarily granted protection for:", opts: ["10 years", "14 years", "20 years", "25 years"], correct: 2 },
+    { q: "A hypothesis in research methodology is best described as:", opts: ["A proven fact", "A tentative, testable statement", "A summary of findings", "A type of literature review"], correct: 1 },
+    { q: "Which research approach centers on numerical data and statistical analysis?", opts: ["Qualitative research", "Quantitative research", "Action research", "Ethnographic research"], correct: 1 },
+    { q: "Which body administers major international IP treaties such as the Berne Convention?", opts: ["WHO", "WIPO", "WTO", "UNESCO"], correct: 1 },
+    { q: "In India, copyright for a literary work generally lasts for:", opts: ["Author's life + 20 years", "Author's life + 60 years", "30 years from publication", "50 years from publication"], correct: 1 },
+    { q: "Which Act governs patents in India?", opts: ["Trade Marks Act, 1999", "Copyright Act, 1957", "Patents Act, 1970", "Designs Act, 2000"], correct: 2 },
+    { q: "Which Act governs trademarks in India?", opts: ["Patents Act, 1970", "Trade Marks Act, 1999", "Copyright Act, 1957", "Trade Secrets Act"], correct: 1 },
+    { q: "Which Act governs copyright in India?", opts: ["Copyright Act, 1957", "Patents Act, 1970", "IT Act, 2000", "Designs Act, 2000"], correct: 0 },
+    { q: "Which of these is NOT one of the three core patentability criteria?", opts: ["Novelty", "Inventive step", "Industrial applicability", "Commercial success"], correct: 3 },
+    { q: "In India, a registered trademark must typically be renewed every:", opts: ["5 years", "7 years", "10 years", "15 years"], correct: 2 },
+    { q: "A Geographical Indication (GI) tag, like for Darjeeling tea, protects:", opts: ["Any product made in India", "Products whose qualities are linked to a specific place of origin", "Only agricultural exports", "Trademarked logos only"], correct: 1 },
+    { q: "PCT stands for:", opts: ["Patent Cooperation Treaty", "Property Classification Treaty", "Patent Claims Tribunal", "Public Copyright Treaty"], correct: 0 },
+    { q: "TRIPS stands for:", opts: ["Trade-Related Investment and Property Standards", "Trade-Related Aspects of Intellectual Property Rights", "Treaty on Registered Intellectual Property Systems", "Trademark and Research Information Protection System"], correct: 1 },
+    { q: "The TRIPS Agreement is administered by:", opts: ["WIPO", "UNESCO", "WTO", "WHO"], correct: 2 },
+    { q: "The Paris Convention primarily deals with:", opts: ["Copyright protection", "Industrial property such as patents and trademarks", "Data privacy", "Trade secrets only"], correct: 1 },
+    { q: "The Berne Convention primarily deals with:", opts: ["Patents", "Trademarks", "Copyright", "Geographical indications"], correct: 2 },
+    { q: "The Madrid Protocol is mainly used for:", opts: ["International patent filing", "International trademark registration", "International copyright disputes", "Trade secret enforcement"], correct: 1 },
+    { q: "A provisional patent specification is typically filed to:", opts: ["Finalize all claims immediately", "Secure an early priority date before full details are ready", "Replace the need for a complete specification", "Register a trademark"], correct: 1 },
+    { q: "Primary data in research refers to data that is:", opts: ["Collected first-hand by the researcher for the specific study", "Taken from previously published reports", "Always numerical", "Collected without any plan"], correct: 0 },
+    { q: "Secondary data in research refers to data that:", opts: ["Is collected first-hand by the researcher", "Was already collected by someone else for another purpose", "Cannot be reused", "Is always more reliable than primary data"], correct: 1 },
+    { q: "Sampling in research means:", opts: ["Studying the entire population", "Selecting a representative subset of the population to study", "Ignoring data collection", "Only using secondary data"], correct: 1 },
+    { q: "Which is an example of probability sampling?", opts: ["Convenience sampling", "Simple random sampling", "Judgmental sampling", "Snowball sampling"], correct: 1 },
+    { q: "Which is an example of non-probability sampling?", opts: ["Simple random sampling", "Systematic sampling", "Convenience sampling", "Stratified sampling"], correct: 2 },
+    { q: "A Likert scale is commonly used to measure:", opts: ["Physical dimensions", "Attitudes or opinions", "Chemical composition", "Patent validity"], correct: 1 },
+    { q: "Validity in research refers to:", opts: ["Consistency of results over repeated trials", "Whether an instrument measures what it is intended to measure", "The size of the sample", "The length of the study"], correct: 1 },
+    { q: "Reliability in research refers to:", opts: ["Whether a measure captures the right concept", "The consistency of a measurement across repeated trials", "The novelty of the idea", "The cost of the research"], correct: 1 },
+    { q: "The main purpose of a literature review is to:", opts: ["Present the final conclusions", "Survey existing work and identify gaps", "Collect raw data", "Register a patent"], correct: 1 },
+    { q: "A research proposal typically does NOT include:", opts: ["Objectives of the study", "Proposed methodology", "A timeline", "Final results, since the study hasn't been conducted yet"], correct: 3 },
+    { q: "Case study research is best suited for:", opts: ["Large-scale statistical surveys", "In-depth study of a single unit or phenomenon", "Testing chemical compounds", "Filing patent applications"], correct: 1 },
+    { q: "Action research primarily aims to:", opts: ["Solve a practical problem while generating knowledge", "Only publish theoretical findings", "Avoid any real-world application", "Register trademarks"], correct: 0 },
+    { q: "Plagiarism in research means:", opts: ["Citing sources correctly", "Using someone else's work without proper attribution", "Conducting original experiments", "Filing a patent application"], correct: 1 },
+    { q: "Which citation style is widely used in scientific research writing?", opts: ["APA", "Comic Sans", "ISO 9001", "GST format"], correct: 0 },
+    { q: "A trade secret is typically protected through:", opts: ["Formal government registration", "Maintaining strict confidentiality", "Public disclosure", "A fixed 20-year term"], correct: 1 },
+    { q: "The ® symbol next to a brand name indicates:", opts: ["An unregistered trademark", "A registered trademark", "A patented invention", "A copyrighted work"], correct: 1 },
+    { q: "The ™ symbol typically indicates:", opts: ["A registered trademark", "An unregistered or pending trademark claim", "A granted patent", "A copyright notice"], correct: 1 },
+    { q: "Copyright law generally protects:", opts: ["The underlying idea", "The specific expression of an idea", "Facts themselves", "Scientific principles"], correct: 1 },
+    { q: "Industrial design protection mainly covers:", opts: ["The functional mechanism of a product", "The visual or aesthetic appearance of a product", "The brand name only", "The chemical formula"], correct: 1 },
+    { q: "Semiconductor IC layout-design protection relates to:", opts: ["Software source code", "The physical layout/topography of integrated circuits", "Trademarked logos", "Literary works"], correct: 1 },
+    { q: "Moral rights of an author typically include:", opts: ["The right to sell shares", "The right of attribution and integrity of the work", "The right to a patent", "The right to a trademark"], correct: 1 },
+    { q: "Fair use / fair dealing provisions generally allow:", opts: ["Unlimited commercial copying", "Limited use of copyrighted work for purposes like criticism, review, or education", "Selling pirated copies", "Removing copyright notices"], correct: 1 },
+    { q: "Patent infringement occurs when:", opts: ["An inventor uses their own patented invention", "Someone uses a patented invention without authorization", "A patent application is filed", "A patent expires naturally"], correct: 1 },
+    { q: "A 'first-to-file' patent system means:", opts: ["The patent goes to whoever invented it first, regardless of filing", "The patent goes to whoever files the application first", "Patents are granted automatically", "Filing order doesn't matter"], correct: 1 },
+    { q: "Exploratory research is typically conducted when:", opts: ["The problem is already well defined with clear hypotheses", "The problem is not clearly defined and needs initial insight", "Only confirming existing patents", "Filing a trademark renewal"], correct: 1 },
+    { q: "Descriptive research primarily aims to:", opts: ["Manipulate variables experimentally", "Describe the characteristics of a phenomenon or population", "Grant patents", "Avoid data collection"], correct: 1 },
+    { q: "In an experiment, the variable that is deliberately manipulated is called the:", opts: ["Dependent variable", "Independent variable", "Control variable", "Extraneous variable"], correct: 1 },
+    { q: "In an experiment, the variable measured to see the effect of change is called the:", opts: ["Independent variable", "Dependent variable", "Confounding variable", "Control variable"], correct: 1 },
+    { q: "Correlation between two variables indicates:", opts: ["That one variable definitely causes the other", "A statistical relationship, not necessarily causation", "No relationship at all", "That both variables are patented"], correct: 1 },
+    { q: "A patentable invention must generally be novel, involve an inventive step, and have:", opts: ["Industrial applicability", "Guaranteed commercial profit", "Celebrity endorsement", "Government subsidy"], correct: 0 }
+  ];
+
+  let qIndex = 0;
+  let answered = false;
+  let score = 0;
+
+  function renderQuestion(){
+    const item = quiz[qIndex];
+    const pct = ((qIndex) / quiz.length) * 100;
+    quizBody.innerHTML = `
+      <p class="quiz-progress">Question ${qIndex + 1} of ${quiz.length}</p>
+      <div class="quiz-bar-track"><div class="quiz-bar-fill" style="width:${pct}%"></div></div>
+      <p class="quiz-q">${item.q}</p>
+      <div class="quiz-opts" id="quizOpts">
+        ${item.opts.map((o, i) => `<button class="quiz-opt" data-i="${i}">${o}</button>`).join('')}
+      </div>
+      <div class="quiz-nav">
+        <button class="quiz-btn" id="quizNext" disabled>${qIndex === quiz.length - 1 ? 'Finish' : 'Next'}</button>
+      </div>
+    `;
+    answered = false;
+    const optsEl = document.getElementById('quizOpts');
+    const nextBtn = document.getElementById('quizNext');
+    optsEl.querySelectorAll('.quiz-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        const chosen = parseInt(btn.dataset.i, 10);
+        optsEl.querySelectorAll('.quiz-opt').forEach(b => {
+          const i = parseInt(b.dataset.i, 10);
+          if (i === item.correct) b.classList.add('correct');
+          else if (i === chosen) b.classList.add('incorrect');
+        });
+        if (chosen === item.correct) score++;
+        nextBtn.disabled = false;
+      });
+    });
+    nextBtn.addEventListener('click', () => {
+      if (qIndex < quiz.length - 1){
+        qIndex++;
+        renderQuestion();
+      } else {
+        renderScore();
+      }
+    });
+  }
+
+  function renderScore(){
+    quizBody.innerHTML = `
+      <div class="quiz-score">
+        <p class="quiz-progress">Result</p>
+        <p class="big">${score} / ${quiz.length}</p>
+        <p style="opacity:.7; font-size:.88rem; margin-bottom:1.4rem;">This 50-question warm-up isn't connected to your actual exam or marks.</p>
+        <button class="quiz-btn" id="quizRestart">Try again</button>
+      </div>
+    `;
+    document.getElementById('quizRestart').addEventListener('click', () => {
+      qIndex = 0; score = 0; renderQuestion();
+    });
+  }
+
+  startBtn.addEventListener('click', () => {
+    if (startBtn.disabled) return;
+    hasStarted = true;
+    qIndex = 0; score = 0;
+    renderQuestion();
+    overlay.classList.add('open');
+    startBtn.disabled = true;
+    startBtn.textContent = 'Started';
+    actionMsg.className = 'action-msg ok';
+    actionMsg.textContent = "Do your actual exam on its own platform — this is just a 50-question RM & IPR warm-up.";
+  });
+
+  closeSessionBtn.addEventListener('click', () => overlay.classList.remove('open'));
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+  cancelBtn.addEventListener('click', () => {
+    actionMsg.className = 'action-msg warn';
+    actionMsg.textContent = "This exam can't be cancelled from here. If you need to withdraw, contact your exam coordinator directly.";
+  });
+
+  document.querySelectorAll('.checklist input').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const label = cb.nextElementSibling;
+      label.classList.toggle('done', cb.checked);
+    });
+  });
+})();
+</script>
+</body>
+</html>
